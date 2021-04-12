@@ -18,6 +18,7 @@ import com.demonstration.toolrental.model.entity.Tool;
 import com.demonstration.toolrental.model.request.ToolRentalRequest;
 import com.demonstration.toolrental.model.response.RentalAgreement;
 import com.demonstration.toolrental.repository.ToolRepository;
+import com.demonstration.toolrental.testutils.TestUtils;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -39,18 +40,18 @@ public class ToolRentalServiceTest {
     }
 
     @Test
-    @DisplayName("Valid input for non holiday ladder request success")
+    @DisplayName("Check weekday success")
     void checkoutLadderSuccess() throws InvalidRequestException {
         LocalDate checkoutDate = LocalDate.of(2015, 3, 9);
         ToolRentalRequest request = new ToolRentalRequest("LADW", checkoutDate, 5, 0);
-        Tool expectedTool = generateLadder();
+        Tool expectedTool = TestUtils.generateLadder();
         when(mockRepository.getToolData(anyString())).thenReturn(expectedTool);
 
         RentalAgreement actual = subject.checkout(request);
 
         verify(mockRepository).getToolData(anyString());
-        assertToolInfoEquals(expectedTool,actual);
-        assertRequestInfoEquals(request,actual);
+        TestUtils.assertToolInfoEquals(expectedTool,actual);
+        TestUtils.assertRequestInfoEquals(request,actual);
         
         assertEquals(request.getRentalDays(), actual.getChargeDays());
         assertEquals(expectedTool.getDailyCharge().multiply(new BigDecimal(request.getRentalDays())), actual.getFinalCharge());
@@ -61,7 +62,7 @@ public class ToolRentalServiceTest {
     void discountCalculationSuccess() throws InvalidRequestException {
         LocalDate checkoutDate = LocalDate.of(2015, 3, 9);
         ToolRentalRequest request = new ToolRentalRequest("LADW", checkoutDate, 5, 71);
-        Tool expectedTool = generateLadder();
+        Tool expectedTool = TestUtils.generateLadder();
         when(mockRepository.getToolData(anyString())).thenReturn(expectedTool);
         double expectedPreDiscountTotal = expectedTool.getDailyCharge().doubleValue() * 5.0;
         BigDecimal expectedDiscountAmount = BigDecimal.valueOf(expectedPreDiscountTotal * ((double)request.getDiscount() / 100.0))
@@ -84,14 +85,14 @@ public class ToolRentalServiceTest {
         System.setOut(new PrintStream(outputStreamCaptor));
         LocalDate checkoutDate = LocalDate.of(2015, 3, 9);
         ToolRentalRequest request = new ToolRentalRequest("JAKR", checkoutDate, 1000, 0);
-        Tool expectedTool = generateJackhammer("Ridgid", request.getToolCode());
+        Tool expectedTool = TestUtils.generateJackhammer("Ridgid", request.getToolCode());
         when(mockRepository.getToolData(anyString())).thenReturn(expectedTool);
 
         RentalAgreement actual = subject.checkout(request);
         String systemOutput = outputStreamCaptor.toString();
 
-        assertToolInfoEquals(expectedTool,actual);
-        assertRequestInfoEquals(request,actual);
+        TestUtils.assertToolInfoEquals(expectedTool,actual);
+        TestUtils.assertRequestInfoEquals(request,actual);
         //Currency Format Check
         assertTrue(systemOutput.contains(NumberFormat.getCurrencyInstance().format(expectedTool.getDailyCharge())));
         assertTrue(systemOutput.contains("$2,116.92"));
@@ -105,11 +106,29 @@ public class ToolRentalServiceTest {
     }
 
     @Test
-    @DisplayName("Test independence day holiday check on a SUNDAY")
+    @DisplayName("Check Independence Day when Holiday Charges are Yest")
+    void checkoutChainsawSuccess() throws InvalidRequestException {
+        LocalDate checkoutDate = LocalDate.of(2020, 7, 2);
+        ToolRentalRequest request = new ToolRentalRequest("CHNS", checkoutDate, 1, 0);
+        Tool expectedTool = TestUtils.generateChainsaw();
+        when(mockRepository.getToolData(anyString())).thenReturn(expectedTool);
+
+        RentalAgreement actual = subject.checkout(request);
+
+        verify(mockRepository).getToolData(anyString());
+        TestUtils.assertToolInfoEquals(expectedTool,actual);
+        TestUtils.assertRequestInfoEquals(request,actual);
+
+        assertEquals(request.getRentalDays(), actual.getChargeDays());
+        assertEquals(expectedTool.getDailyCharge().multiply(new BigDecimal(request.getRentalDays())), actual.getFinalCharge());
+    }
+
+    @Test
+    @DisplayName("Check Independence day on Sunday when Holiday Charge is No")
     void ignoreIndependenceDayOnSunday() throws InvalidRequestException {
         LocalDate checkoutDate = LocalDate.of(2021, 7, 4);
         ToolRentalRequest request = new ToolRentalRequest("JAKR", checkoutDate, 3, 0);
-        Tool expectedTool = generateJackhammer("Ridgid", request.getToolCode());
+        Tool expectedTool = TestUtils.generateJackhammer("Ridgid", request.getToolCode());
         when(mockRepository.getToolData(anyString())).thenReturn(expectedTool);
         
         RentalAgreement actual = subject.checkout(request);
@@ -119,11 +138,11 @@ public class ToolRentalServiceTest {
     }
     
     @Test
-    @DisplayName("Test independence day holiday check on a SATURDAY")
+    @DisplayName("Check Independence day on Saturday when Holiday Charge is No")
     void ignoreIndependenceDayOnSaturday() throws InvalidRequestException {
         LocalDate checkoutDate = LocalDate.of(2020, 7, 2);
         ToolRentalRequest request = new ToolRentalRequest("JAKR", checkoutDate, 1, 0);
-        Tool expectedTool = generateJackhammer("Ridgid", request.getToolCode());
+        Tool expectedTool = TestUtils.generateJackhammer("Ridgid", request.getToolCode());
         when(mockRepository.getToolData(anyString())).thenReturn(expectedTool);
         
         RentalAgreement actual = subject.checkout(request);
@@ -134,11 +153,11 @@ public class ToolRentalServiceTest {
     }
 
     @Test
-    @DisplayName("Test Labor Day holiday check when Holiday Charge is No")
+    @DisplayName("Check Labor Day when Holiday Charge is No")
     void ignoreLaborDay() throws InvalidRequestException {
         LocalDate checkoutDate = LocalDate.of(2020, 9, 6);
         ToolRentalRequest request = new ToolRentalRequest("JAKR", checkoutDate, 1, 0);
-        Tool expectedTool = generateJackhammer("Ridgid", request.getToolCode());
+        Tool expectedTool = TestUtils.generateJackhammer("Ridgid", request.getToolCode());
         when(mockRepository.getToolData(anyString())).thenReturn(expectedTool);
 
         RentalAgreement actual = subject.checkout(request);
@@ -147,65 +166,32 @@ public class ToolRentalServiceTest {
     }
     
     @Test
-    @DisplayName("Test weekend check when Weekend Charge is No")
+    @DisplayName("Check weekend when Weekend Charge is No")
     void ignoreWeekends() throws InvalidRequestException {
         LocalDate checkoutDate = LocalDate.of(2021, 4, 9);
-        ToolRentalRequest request = new ToolRentalRequest("Stihl", checkoutDate, 3, 0);
-        Tool expectedTool = generateChainsaw();
+        ToolRentalRequest request = new ToolRentalRequest("CHNS", checkoutDate, 3, 0);
+        Tool expectedTool = TestUtils.generateChainsaw();
         when(mockRepository.getToolData(anyString())).thenReturn(expectedTool);
 
         RentalAgreement actual = subject.checkout(request);
-        
+
+        TestUtils.assertToolInfoEquals(expectedTool,actual);
+        TestUtils.assertRequestInfoEquals(request,actual);
         assertEquals(request.getRentalDays() - 2, actual.getChargeDays());
     }
-    //Compare the request to the rental agreement
-    private void assertRequestInfoEquals(ToolRentalRequest request, RentalAgreement actual) {
-        assertEquals(request.getCheckoutDate(), actual.getCheckoutDate());
-        assertEquals(request.getToolCode(), actual.getToolCode());
-        assertEquals(request.getDiscount(), actual.getDiscountPercent());
-    }
 
-    //Compare the mocked tool information to the rental agreement
-    private void assertToolInfoEquals(Tool expectedTool, RentalAgreement actual) {
-        assertEquals(expectedTool.getBrand(), actual.getToolBrand());
-        assertEquals(expectedTool.getToolCode(), actual.getToolCode());
-        assertEquals(expectedTool.getToolType(), actual.getToolType());
-        assertEquals(expectedTool.getDailyCharge(), actual.getDailyRentalCharge());
-    }
+    @Test
+    @DisplayName("Check weekend when Weekend Charge is Yes")
+    void includeWeekends() throws InvalidRequestException {
+        LocalDate checkoutDate = LocalDate.of(2021, 4, 9);
+        ToolRentalRequest request = new ToolRentalRequest("LADW", checkoutDate, 3, 0);
+        Tool expectedTool = TestUtils.generateLadder();
+        when(mockRepository.getToolData(anyString())).thenReturn(expectedTool);
 
-    private Tool generateLadder() {
-        return Tool.builder()
-            .toolType("Ladder")
-            .brand("Werner")
-            .toolCode("LADW")
-            .dailyCharge(new BigDecimal(1.99).setScale(2,RoundingMode.HALF_UP))
-            .weekdayCharge("Yes")
-            .weekendCharge("Yes")
-            .holidayCharge("No")
-            .build();
-    }
+        RentalAgreement actual = subject.checkout(request);
 
-    private Tool generateChainsaw() {
-        return Tool.builder()
-            .toolType("Chainsaw")
-            .brand("Stihl")
-            .toolCode("CHNS")
-            .dailyCharge(new BigDecimal(1.49).setScale(2,RoundingMode.HALF_UP))
-            .weekdayCharge("Yes")
-            .weekendCharge("No")
-            .holidayCharge("Yes")
-            .build();
-    }
-
-    private Tool generateJackhammer(String brand, String toolCode) {
-        return Tool.builder()
-            .toolType("Jackhammer")
-            .brand(brand)
-            .toolCode(toolCode)
-            .dailyCharge(new BigDecimal(2.99).setScale(2,RoundingMode.HALF_UP))
-            .weekdayCharge("Yes")
-            .weekendCharge("No")
-            .holidayCharge("No")
-            .build();
+        TestUtils.assertToolInfoEquals(expectedTool,actual);
+        TestUtils.assertRequestInfoEquals(request,actual);
+        assertEquals(request.getRentalDays(), actual.getChargeDays());
     }
 }

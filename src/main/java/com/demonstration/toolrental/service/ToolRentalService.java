@@ -41,11 +41,7 @@ public class ToolRentalService {
     private int calculateBillableDays(List<LocalDate> rentalDates, Tool rentalTool) {
         int billableDays = 0;
         for (LocalDate localDate : rentalDates) {
-            //Don't charge checkout day
-            if(localDate.equals(rentalDates.get(0))) {
-                continue;
-            }
-            //Check Holidays first
+            //Check Holidays
             if(rentalTool.getHolidayCharge().equalsIgnoreCase("No") 
                     && dateIsHoliday(localDate)) {
                 continue;
@@ -70,18 +66,23 @@ public class ToolRentalService {
         if ((localDate.getDayOfWeek().equals(DayOfWeek.FRIDAY) && localDate.plusDays(1).equals(independenceDay))
         || (localDate.getDayOfWeek().equals(DayOfWeek.MONDAY) && localDate.minusDays(1).equals(independenceDay))) {
             return true;
-        } else if (localDate.equals(independenceDay) && !dateIsWeekend(localDate)) {
+        }
+
+        if (localDate.equals(independenceDay) && !dateIsWeekend(localDate)) {
             return true;
-        } else if (localDate.getMonth().equals(Month.SEPTEMBER) && localDate.getDayOfMonth() < 8 
-                    && localDate.getDayOfWeek().equals(DayOfWeek.MONDAY)) {
+        }
+
+        if (localDate.getMonth().equals(Month.SEPTEMBER)
+                && localDate.getDayOfMonth() < 8
+                && localDate.getDayOfWeek().equals(DayOfWeek.MONDAY)) {
             return true;
         }
         return false;
     }
     
     private List<LocalDate> getRentalDates(LocalDate checkoutDate, int rentalDays) {
-        List<LocalDate> rentalDates = new ArrayList<LocalDate>();
-        rentalDates.add(checkoutDate);
+        List<LocalDate> rentalDates = new ArrayList<>();
+        //Start at i=1 to not charge checkout day
         for (int i = 1; i <= rentalDays; i++) {
             rentalDates.add(checkoutDate.plusDays(i));
         }
@@ -96,7 +97,7 @@ public class ToolRentalService {
         rentalAgreement.setRentalDays(request.getRentalDays());
         rentalAgreement.setCheckoutDate(request.getCheckoutDate());
         rentalAgreement.setDueDate(request.getCheckoutDate().plusDays(request.getRentalDays()));
-        rentalAgreement.setDailyRentalCharge(rentalTool.getDailyCharge().setScale(2,RoundingMode.HALF_UP));
+        rentalAgreement.setDailyRentalCharge(rentalTool.getDailyCharge());
         rentalAgreement.setChargeDays(billableDays);
         BigDecimal subtotal = rentalTool.getDailyCharge().multiply(new BigDecimal(billableDays));
         rentalAgreement.setPrediscountCharge(subtotal.setScale(2, RoundingMode.HALF_UP));
