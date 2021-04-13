@@ -1,5 +1,15 @@
 package com.demonstration.toolrental.service;
 
+import com.demonstration.toolrental.controller.exceptions.EmptyResultSetException;
+import com.demonstration.toolrental.controller.exceptions.InvalidRequestException;
+import com.demonstration.toolrental.model.entity.Tool;
+import com.demonstration.toolrental.model.request.ToolRentalRequest;
+import com.demonstration.toolrental.model.response.RentalAgreement;
+import com.demonstration.toolrental.repository.ToolRepository;
+import com.demonstration.toolrental.util.Validator;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.DayOfWeek;
@@ -7,16 +17,6 @@ import java.time.LocalDate;
 import java.time.Month;
 import java.util.ArrayList;
 import java.util.List;
-
-import com.demonstration.toolrental.controller.exceptions.InvalidRequestException;
-import com.demonstration.toolrental.model.entity.Tool;
-import com.demonstration.toolrental.model.request.ToolRentalRequest;
-import com.demonstration.toolrental.model.response.RentalAgreement;
-import com.demonstration.toolrental.repository.ToolRepository;
-import com.demonstration.toolrental.util.Validator;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 
 @Service
 public class ToolRentalService {
@@ -28,10 +28,16 @@ public class ToolRentalService {
         this.toolRepository = toolRepository;
     }
 
-    public RentalAgreement checkout(ToolRentalRequest request) throws InvalidRequestException {
+    public RentalAgreement checkout(ToolRentalRequest request) throws InvalidRequestException, EmptyResultSetException {
         Validator.validateRequest(request);
+        //Repository call to get tool data from H2 data source
         Tool rentalTool = toolRepository.getToolData(request.getToolCode());
+        if (rentalTool == null) {
+            throw new EmptyResultSetException("Failed to find tool with Tool Code: " + request.getToolCode());
+        }
+        //Get rental dates list to compare with holidays/weekends
         List<LocalDate> rentalDates = getRentalDates(request.getCheckoutDate(), request.getRentalDays());
+        //Find which dates can be charged
         int billableDays = calculateBillableDays(rentalDates, rentalTool);
         RentalAgreement rentalAgreement = generateAgreement(rentalTool, billableDays, request);
         rentalAgreement.printAgreement();
@@ -46,11 +52,12 @@ public class ToolRentalService {
                     && dateIsHoliday(localDate)) {
                 continue;
             }
-            //Check Weekends as well in case future tools have no charge on both
+            //Check Weekends
             if(rentalTool.getWeekendCharge().equalsIgnoreCase("No")
                     && dateIsWeekend(localDate)) {
                 continue;
             }
+            //Only add to billableDays if there aren't any qualifying exclusions
             billableDays++;
         }
         return billableDays;
@@ -63,15 +70,16 @@ public class ToolRentalService {
     
     private boolean dateIsHoliday(LocalDate localDate) {
         LocalDate independenceDay = LocalDate.of(localDate.getYear(),7,4);
+        //if Independence day is on the weekend
         if ((localDate.getDayOfWeek().equals(DayOfWeek.FRIDAY) && localDate.plusDays(1).equals(independenceDay))
         || (localDate.getDayOfWeek().equals(DayOfWeek.MONDAY) && localDate.minusDays(1).equals(independenceDay))) {
             return true;
         }
-
+        //if Independence day is during the week
         if (localDate.equals(independenceDay) && !dateIsWeekend(localDate)) {
             return true;
         }
-
+        //Check for first monday of September for labor day
         if (localDate.getMonth().equals(Month.SEPTEMBER)
                 && localDate.getDayOfMonth() < 8
                 && localDate.getDayOfWeek().equals(DayOfWeek.MONDAY)) {
@@ -109,9 +117,6 @@ public class ToolRentalService {
     }
 
     private BigDecimal calculateDiscountAmount(int discountPercent, BigDecimal subtotal) {
-        if (discountPercent == 0) {
-            return BigDecimal.ZERO;
-        }
         double discountDecimal = (double) discountPercent / 100.00;
         BigDecimal discount = BigDecimal.valueOf(discountDecimal).setScale(2,RoundingMode.HALF_UP);
         return subtotal.multiply(discount).setScale(2,RoundingMode.HALF_UP);

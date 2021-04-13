@@ -1,15 +1,14 @@
 package com.demonstration.toolrental.util;
 
+import com.demonstration.toolrental.model.request.ToolRentalRequest;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
 import java.time.LocalDate;
 
-import com.demonstration.toolrental.controller.exceptions.InvalidRequestException;
-import com.demonstration.toolrental.model.request.ToolRentalRequest;
 import static com.demonstration.toolrental.util.ApplicationConstants.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
-
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
 
 class ValidatorTest {
 
@@ -52,10 +51,35 @@ class ValidatorTest {
             assertEquals(INVALID_DISCOUNT_PERCENT, e.getMessage());
         }
     }
+
+    @Test
+    @DisplayName("Catch exception when request has null checkout date")
+    void validationFailure_CheckoutDate() {
+        ToolRentalRequest request = new ToolRentalRequest("LADW", null, 5, 10);
+
+        try {
+            Validator.validateRequest(request);
+        } catch (Exception e) {
+            assertEquals(CHECKOUT_DATE_NULL, e.getMessage());
+        }
+    }
+
+    @Test
+    @DisplayName("Catch exception when request has empty Tool Code")
+    void validationFailure_ToolCode() {
+        LocalDate checkoutDate = LocalDate.of(2015, 3, 9);
+        ToolRentalRequest request = new ToolRentalRequest("", checkoutDate, 5, 10);
+
+        try {
+            Validator.validateRequest(request);
+        } catch (Exception e) {
+            assertEquals(TOOL_CODE_EMPTY_OR_NULL, e.getMessage());
+        }
+    }
     
     @Test
     @DisplayName("Catch exception when request is empty")
-    void validationFailure_EmptyRequest() throws InvalidRequestException {
+    void validationFailure_EmptyRequest() {
         ToolRentalRequest request = new ToolRentalRequest();
         try {
             Validator.validateRequest(request);

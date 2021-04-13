@@ -1,7 +1,6 @@
 package com.demonstration.toolrental.repository;
 
 import com.demonstration.toolrental.model.entity.Tool;
-
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;

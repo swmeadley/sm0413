@@ -1,10 +1,17 @@
 package com.demonstration.toolrental.service;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import com.demonstration.toolrental.controller.exceptions.EmptyResultSetException;
+import com.demonstration.toolrental.controller.exceptions.InvalidRequestException;
+import com.demonstration.toolrental.model.entity.Tool;
+import com.demonstration.toolrental.model.request.ToolRentalRequest;
+import com.demonstration.toolrental.model.response.RentalAgreement;
+import com.demonstration.toolrental.repository.ToolRepository;
+import com.demonstration.toolrental.testutils.TestUtils;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -13,18 +20,12 @@ import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 
-import com.demonstration.toolrental.controller.exceptions.InvalidRequestException;
-import com.demonstration.toolrental.model.entity.Tool;
-import com.demonstration.toolrental.model.request.ToolRentalRequest;
-import com.demonstration.toolrental.model.response.RentalAgreement;
-import com.demonstration.toolrental.repository.ToolRepository;
-import com.demonstration.toolrental.testutils.TestUtils;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class ToolRentalServiceTest {
 
@@ -41,7 +42,7 @@ public class ToolRentalServiceTest {
 
     @Test
     @DisplayName("Check weekday success")
-    void checkoutLadderSuccess() throws InvalidRequestException {
+    void checkoutLadderSuccess() throws InvalidRequestException, EmptyResultSetException {
         LocalDate checkoutDate = LocalDate.of(2015, 3, 9);
         ToolRentalRequest request = new ToolRentalRequest("LADW", checkoutDate, 5, 0);
         Tool expectedTool = TestUtils.generateLadder();
@@ -59,7 +60,7 @@ public class ToolRentalServiceTest {
 
     @Test
     @DisplayName("Check discount calculation")
-    void discountCalculationSuccess() throws InvalidRequestException {
+    void discountCalculationSuccess() throws InvalidRequestException, EmptyResultSetException {
         LocalDate checkoutDate = LocalDate.of(2015, 3, 9);
         ToolRentalRequest request = new ToolRentalRequest("LADW", checkoutDate, 5, 71);
         Tool expectedTool = TestUtils.generateLadder();
@@ -79,7 +80,7 @@ public class ToolRentalServiceTest {
     
     @Test
     @DisplayName("Check Agreement console format")
-    void checkoutJackhammerSuccess() throws InvalidRequestException {
+    void checkoutJackhammerSuccess() throws InvalidRequestException, EmptyResultSetException {
         final PrintStream standardOut = System.out;
         final ByteArrayOutputStream outputStreamCaptor = new ByteArrayOutputStream();
         System.setOut(new PrintStream(outputStreamCaptor));
@@ -107,7 +108,7 @@ public class ToolRentalServiceTest {
 
     @Test
     @DisplayName("Check Independence Day when Holiday Charges are Yest")
-    void checkoutChainsawSuccess() throws InvalidRequestException {
+    void checkoutChainsawSuccess() throws InvalidRequestException, EmptyResultSetException {
         LocalDate checkoutDate = LocalDate.of(2020, 7, 2);
         ToolRentalRequest request = new ToolRentalRequest("CHNS", checkoutDate, 1, 0);
         Tool expectedTool = TestUtils.generateChainsaw();
@@ -125,7 +126,7 @@ public class ToolRentalServiceTest {
 
     @Test
     @DisplayName("Check Independence day on Sunday when Holiday Charge is No")
-    void ignoreIndependenceDayOnSunday() throws InvalidRequestException {
+    void ignoreIndependenceDayOnSunday() throws InvalidRequestException, EmptyResultSetException {
         LocalDate checkoutDate = LocalDate.of(2021, 7, 4);
         ToolRentalRequest request = new ToolRentalRequest("JAKR", checkoutDate, 3, 0);
         Tool expectedTool = TestUtils.generateJackhammer("Ridgid", request.getToolCode());
@@ -139,7 +140,7 @@ public class ToolRentalServiceTest {
     
     @Test
     @DisplayName("Check Independence day on Saturday when Holiday Charge is No")
-    void ignoreIndependenceDayOnSaturday() throws InvalidRequestException {
+    void ignoreIndependenceDayOnSaturday() throws InvalidRequestException, EmptyResultSetException {
         LocalDate checkoutDate = LocalDate.of(2020, 7, 2);
         ToolRentalRequest request = new ToolRentalRequest("JAKR", checkoutDate, 1, 0);
         Tool expectedTool = TestUtils.generateJackhammer("Ridgid", request.getToolCode());
@@ -154,7 +155,7 @@ public class ToolRentalServiceTest {
 
     @Test
     @DisplayName("Check Labor Day when Holiday Charge is No")
-    void ignoreLaborDay() throws InvalidRequestException {
+    void ignoreLaborDay() throws InvalidRequestException, EmptyResultSetException {
         LocalDate checkoutDate = LocalDate.of(2020, 9, 6);
         ToolRentalRequest request = new ToolRentalRequest("JAKR", checkoutDate, 1, 0);
         Tool expectedTool = TestUtils.generateJackhammer("Ridgid", request.getToolCode());
@@ -167,7 +168,7 @@ public class ToolRentalServiceTest {
     
     @Test
     @DisplayName("Check weekend when Weekend Charge is No")
-    void ignoreWeekends() throws InvalidRequestException {
+    void ignoreWeekends() throws InvalidRequestException, EmptyResultSetException {
         LocalDate checkoutDate = LocalDate.of(2021, 4, 9);
         ToolRentalRequest request = new ToolRentalRequest("CHNS", checkoutDate, 3, 0);
         Tool expectedTool = TestUtils.generateChainsaw();
@@ -182,7 +183,7 @@ public class ToolRentalServiceTest {
 
     @Test
     @DisplayName("Check weekend when Weekend Charge is Yes")
-    void includeWeekends() throws InvalidRequestException {
+    void includeWeekends() throws InvalidRequestException, EmptyResultSetException {
         LocalDate checkoutDate = LocalDate.of(2021, 4, 9);
         ToolRentalRequest request = new ToolRentalRequest("LADW", checkoutDate, 3, 0);
         Tool expectedTool = TestUtils.generateLadder();
@@ -193,5 +194,21 @@ public class ToolRentalServiceTest {
         TestUtils.assertToolInfoEquals(expectedTool,actual);
         TestUtils.assertRequestInfoEquals(request,actual);
         assertEquals(request.getRentalDays(), actual.getChargeDays());
+    }
+
+    @Test
+    @DisplayName("Check handling of no tool found")
+    void noToolFound() throws InvalidRequestException {
+        LocalDate checkoutDate = LocalDate.of(2015, 3, 9);
+        ToolRentalRequest request = new ToolRentalRequest("NOPE", checkoutDate, 5, 0);
+        Tool expectedTool = TestUtils.generateLadder();
+        when(mockRepository.getToolData(anyString())).thenReturn(null);
+
+        try {
+            RentalAgreement actual = subject.checkout(request);
+            fail();
+        } catch (EmptyResultSetException ex) {
+            assertTrue(ex.getMessage().equalsIgnoreCase("Failed to find tool with Tool Code: NOPE"));
+        }
     }
 }

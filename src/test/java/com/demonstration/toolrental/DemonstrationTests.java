@@ -1,28 +1,28 @@
 package com.demonstration.toolrental;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.when;
-import static com.demonstration.toolrental.util.ApplicationConstants.INVALID_DISCOUNT_PERCENT;
-
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.LocalDate;
-
+import com.demonstration.toolrental.controller.exceptions.EmptyResultSetException;
 import com.demonstration.toolrental.controller.exceptions.InvalidRequestException;
 import com.demonstration.toolrental.model.entity.Tool;
 import com.demonstration.toolrental.model.request.ToolRentalRequest;
 import com.demonstration.toolrental.model.response.RentalAgreement;
 import com.demonstration.toolrental.repository.ToolRepository;
 import com.demonstration.toolrental.service.ToolRentalService;
-
 import com.demonstration.toolrental.testutils.TestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+
+import static com.demonstration.toolrental.util.ApplicationConstants.INVALID_DISCOUNT_PERCENT;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 
 class DemonstrationTests {
 
@@ -48,14 +48,14 @@ class DemonstrationTests {
         try {
             RentalAgreement actual = subject.checkout(request);
             fail();
-        } catch (InvalidRequestException e) {
+        } catch (InvalidRequestException | EmptyResultSetException e) {
             assertEquals(INVALID_DISCOUNT_PERCENT, e.getLocalizedMessage());
         }
     }
 
     @Test
     @DisplayName("TEST 2")
-    void testTwo() throws InvalidRequestException {
+    void testTwo() throws InvalidRequestException, EmptyResultSetException {
         LocalDate checkoutDate = LocalDate.of(2020, 7, 2);
         ToolRentalRequest request = new ToolRentalRequest("LADW", checkoutDate, 3, 10);
         Tool expectedTool = TestUtils.generateLadder();
@@ -77,7 +77,7 @@ class DemonstrationTests {
 
     @Test
     @DisplayName("TEST 3")
-    void testThree() throws InvalidRequestException {
+    void testThree() throws InvalidRequestException, EmptyResultSetException {
         LocalDate checkoutDate = LocalDate.of(2015, 7, 2);
         ToolRentalRequest request = new ToolRentalRequest("CHNS", checkoutDate, 5, 25);
         Tool expectedTool = TestUtils.generateChainsaw();
@@ -99,7 +99,7 @@ class DemonstrationTests {
 
     @Test
     @DisplayName("TEST 4")
-    void testFour() throws InvalidRequestException {
+    void testFour() throws InvalidRequestException, EmptyResultSetException {
         LocalDate checkoutDate = LocalDate.of(2015, 9, 3);
         ToolRentalRequest request = new ToolRentalRequest("JAKD", checkoutDate, 6, 0);
         Tool expectedTool = TestUtils.generateJackhammer("DeWalt", "JAKD");
@@ -114,14 +114,14 @@ class DemonstrationTests {
         //3 * 2.99 = 8.97 Pre-Discount Charge
         assertEquals(BigDecimal.valueOf(8.97),actual.getPrediscountCharge());
         //8.97 * 0 = 0.00 Discount Amount
-        assertEquals(BigDecimal.ZERO,actual.getDiscountAmount());
+        assertEquals(BigDecimal.valueOf(0.00).setScale(2,RoundingMode.UNNECESSARY),actual.getDiscountAmount());
         //8.97 - 0 = 8.97 Final Charge
         assertEquals(BigDecimal.valueOf(8.97), actual.getFinalCharge());
     }
 
     @Test
     @DisplayName("TEST 5")
-    void testFive() throws InvalidRequestException {
+    void testFive() throws InvalidRequestException, EmptyResultSetException {
         LocalDate checkoutDate = LocalDate.of(2015, 7, 2);
         ToolRentalRequest request = new ToolRentalRequest("JAKR", checkoutDate, 9, 0);
         Tool expectedTool = TestUtils.generateJackhammer("Ridgid", "JAKR");
@@ -136,14 +136,14 @@ class DemonstrationTests {
         //5 * 2.99 = 14.95 Pre-Discount Charge
         assertEquals(BigDecimal.valueOf(14.95),actual.getPrediscountCharge());
         //14.95 * 0 = 0.00 Discount Amount
-        assertEquals(BigDecimal.ZERO,actual.getDiscountAmount());
+        assertEquals(BigDecimal.valueOf(0.00).setScale(2,RoundingMode.UNNECESSARY),actual.getDiscountAmount());
         //14.95 - 0 = 14.95 Final Charge
         assertEquals(BigDecimal.valueOf(14.95), actual.getFinalCharge());
     }
 
     @Test
     @DisplayName("TEST 6")
-    void testSix() throws InvalidRequestException {
+    void testSix() throws InvalidRequestException, EmptyResultSetException {
         LocalDate checkoutDate = LocalDate.of(2020, 7, 2);
         ToolRentalRequest request = new ToolRentalRequest("JAKR", checkoutDate, 4, 50);
         Tool expectedTool = TestUtils.generateJackhammer("Ridgid", "JAKR");
